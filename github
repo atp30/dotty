@@ -1,0 +1,57 @@
+#! /bin/sh
+
+
+revision_not_found=64
+repo_not_found=65
+wrong_treeish=66
+
+cleanup () {
+  rm -rf $repo
+  exit $1
+}
+
+caddy=`store`
+src=$1 &&
+revision=$2
+
+echo $0 >> /dev/stderr
+if ( echo $0 | grep bitbucket ); then
+    url=git@bitbucket.org:$src.git
+else
+    url=https://github.com/$src
+fi
+
+echo $caddy $src $revision > /dev/stderr
+
+
+if [ ! -d "$caddy/$revision" ]; then
+  echo "Downloading repo fresh" > /dev/stderr
+  repo=$(mktemp -d) &&
+  (
+   git clone --recursive --bare $url $repo || cleanup $repo_not_found
+   cd $repo &&
+   export outname=`git rev-parse $2` &&
+   if [ ! -d "$caddy/$outname" ]; then
+     echo "Making Directory $caddy/$outname" >> /dev/stderr
+     mkdir -p "$caddy/$outname" &&
+     git --work-tree="$caddy/$outname" checkout $2 -- .\
+      || exit $revision_not_found
+     chmod --recursive -w "$caddy/$outname"
+
+   fi &&
+
+    if [ $revision = $outname ]; then
+      echo "New revision: $revision = $outname" > /dev/stderr
+      echo "$caddy/$outname" &&  cleanup 0
+    else
+      echo "ERROR: Only full hash may be specified"
+      echo "use $outname" > /dev/stderr
+      cleanup $wrong_treeish
+    fi 
+
+  ) &&
+  cleanup 0
+else
+  echo "Directory exists: $revision" >> /dev/stderr
+  echo "$caddy/$revision" && exit 0
+fi

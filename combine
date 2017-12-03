@@ -1,0 +1,105 @@
+#!/bin/sh
+echo "-------------" >/dev/stderr
+echo $0 $@ > /dev/stderr
+echo "-------------" >/dev/stderr
+
+newpath=$(dirname $(realpath $0))
+github=$newpath/github
+bitbucket=$newpath/bitbucket
+combine=$newpath/combine
+caddy=`$newpath/store`
+
+cleanup () {
+ rm -rf $1; exit $2
+}
+
+mkcontentaddressable () {
+    a=`mktemp`
+    chksum=`cat $1 | tee $a | git hash-object /dev/stdin`
+    if [ ! -f "$caddy/$chksum" ] && [ ! -d "$caddy/$chksum" ]; then
+        mv $a "$caddy/$chksum" || cleanup $a 1
+        chmod -R -w "$caddy/$chksum" || cleanup $a 1
+    else
+        rm -rf $a
+    fi
+    echo "$caddy/$chksum"
+}
+
+# Composition Script
+# Allowed to write to it's own directory and access other directories
+# Have script in the store
+# Run in empty directory
+# provide only a limited range of functions
+# keep track of 
+
+# First argument is a script. Other arguments are passed to the script.
+# We do not care about the name with which the script is invoked - we do care 
+# about the other names.
+
+
+script=`realpath $1`
+shift
+
+hash1=`git hash-object $script`
+hash2=`echo "$hash1" "$*"|git hash-object /dev/stdin`
+out="$caddy/$hash2"
+deps="$out-deps"
+
+alii () {
+ for i in "$@"; do
+    echo "$i () {
+         $(command -v $i) \"\$@\"
+}"
+ done
+}
+
+allowed_commands=`alii grep sed cp cd chmod test tr sort uniq wc zcat sort\
+    rm rmdir mv mkfifo ls ln tee touch true false head tail strip strings\
+    split sed printf diff patch make mkdir join expr cut compress`
+
+if [ ! -d "$out" ]; then
+  if (
+    mkdir $out
+    cd $out
+    env=`env`
+    
+    env -i sh /dev/stdin "$@" <<....EOF
+    # cat >> /dev/stderr <<....EOF
+    $allowed_commands
+    combine () {
+      echo "beginning to combine" > /dev/stderr
+      PATH=$newpath:$PATH HOME=$HOME $combine "\$@"
+    }
+    github () {
+      repo=\$(PATH=$newpath:$PATH HOME=$HOME $github \$1 \$2) 
+      echo \$2 >> $deps &&
+      echo \$repo > /dev/stderr &&
+      echo \$repo
+    }
+    bitbucket () {
+      repo=\$(PATH=$newpath:$PATH HOME=$HOME $bitbucket \$1 \$2) 
+      echo \$2 >> $deps &&
+      echo \$repo > /dev/stderr &&
+      echo \$repo
+    }
+    $(cat $script)
+....EOF
+   ); then
+     chmod -R -w "$out"
+     chmod -w "$out-deps"
+     echo $out
+     exit 0
+   else
+     rm -rf "$out"
+     rm $out-deps
+     echo "Script Failed"
+     exit 0
+   fi
+
+else
+  echo "Directory Already Exists" > /dev/stderr
+  echo $out
+  exit 0
+fi
+
+

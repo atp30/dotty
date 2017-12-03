@@ -1,0 +1,9 @@
+#!/bin/sh
+if [ ! -z "$TPOT_CADDY"]; then
+  caddy="$TPOT_CADDY"
+elif [ ! -z "$XDG_DATA_HOME" ]; then
+  caddy="$XDG_DATA_HOME/tpot_caddy"
+else
+  caddy="$HOME/.local/share/tpot_caddy"
+fi
+echo $caddy
