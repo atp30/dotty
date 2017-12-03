@@ -1,6 +1,5 @@
 #! /bin/sh
 
-
 revision_not_found=64
 repo_not_found=65
 wrong_treeish=66
@@ -10,19 +9,19 @@ cleanup () {
   exit $1
 }
 
-caddy=`store`
+path=$(dirname $(realpath $0))
+caddy=`$path/store`
 src=$1 &&
 revision=$2
 
 echo $0 >> /dev/stderr
-if ( echo $0 | grep bitbucket ); then
+if ( echo $0 | grep bitbucket > /dev/null ); then
     url=git@bitbucket.org:$src.git
 else
     url=https://github.com/$src
 fi
 
 echo $caddy $src $revision > /dev/stderr
-
 
 if [ ! -d "$caddy/$revision" ]; then
   echo "Downloading repo fresh" > /dev/stderr

@@ -1,5 +1,7 @@
 echo "combining studd" >/dev/stderr
-cp -r $(bitbucket alistairtpotts/dotty-test b511cf3586c72b1dcb346b2db2e1874ce7baae58)/* .
+cp -r $(bitbucket alistairtpotts/dotty-test 2a0b05716d7b7eeb4ad079690663b8c5f0a5ea5e)/* .
+echo "created some stuff"
+ls ./ >/dev/stderr
 echo "more combining" >/dev/stderr
 a=$(combine ./test.sh)
 echo "combined $a" >/dev/stderr
